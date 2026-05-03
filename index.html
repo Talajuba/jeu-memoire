@@ -128,24 +128,22 @@
             margin-bottom: 1.5rem;
             justify-content: center;
         }
+        /* Grilles par défaut (PC) */
         .grid-4 { grid-template-columns: repeat(4, 1fr); max-width: 500px; margin: 0 auto; }
         .grid-5 { grid-template-columns: repeat(5, 1fr); max-width: 620px; margin: 0 auto; }
         .grid-6 { grid-template-columns: repeat(6, 1fr); max-width: 740px; margin: 0 auto; }
         
-        /* Adaptation mobile : on garde 4 colonnes pour tous les niveaux sur mobile */
+        /* Adaptation mobile : 4 colonnes pour tous les niveaux */
         @media (max-width: 650px) {
-            .grid-6,
-            .grid-5,
-            .grid-4 {
+            .grid-4, .grid-5, .grid-6 {
                 grid-template-columns: repeat(4, 1fr) !important;
+                max-width: 100% !important;
             }
         }
-        /* Pour les très petits écrans (< 500px), on peut réduire à 3 colonnes si nécessaire, mais on laisse 4 selon la demande */
-        @media (max-width: 500px) {
-            .grid-6,
-            .grid-5,
-            .grid-4 {
-                grid-template-columns: repeat(4, 1fr) !important;
+        /* Pour les très petits écrans, on peut réduire à 3 colonnes si besoin (optionnel) */
+        @media (max-width: 450px) {
+            .grid-4, .grid-5, .grid-6 {
+                grid-template-columns: repeat(3, 1fr) !important;
             }
         }
         
