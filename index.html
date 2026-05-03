@@ -2,12 +2,13 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
     <title>Urar s tkarḍiwin - Jeu de mémoire</title>
     <style>
         * {
             user-select: none;
             box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
         }
         body {
             background: #f0e8da;
@@ -16,16 +17,19 @@
             display: flex;
             justify-content: center;
             margin: 0;
+            overflow-x: hidden;
         }
         .container {
             max-width: 900px;
             width: 100%;
             background: #fffaf2;
             border-radius: 2rem;
-            padding: 0.8rem 1.5rem 1.5rem;
+            padding: 0.8rem 1rem 1.5rem;
             text-align: center;
             position: relative;
+            overflow-x: hidden;
         }
+        /* Barre du haut */
         .top-bar {
             display: flex;
             justify-content: space-between;
@@ -67,20 +71,20 @@
             justify-content: center;
             gap: 1rem;
             margin-bottom: 1rem;
+            flex-wrap: wrap;
         }
         .level-btn {
             background: #3498db;
             border: none;
-            padding: 0.4rem 1.2rem;
+            padding: 0.4rem 1rem;
             border-radius: 2rem;
             font-weight: bold;
             cursor: pointer;
             color: white;
-            transition: 0.2s;
+            font-size: 0.9rem;
         }
         .level-btn.active {
             background: #1f618d;
-            color: white;
         }
         .level-btn.locked {
             opacity: 0.5;
@@ -102,6 +106,7 @@
             display: inline-flex;
             align-items: center;
             gap: 0.3rem;
+            font-size: 1rem;
         }
         @keyframes blinkMessage {
             0% { background-color: #fff9e6; color: #2c2418; border-color: #c2853e; }
@@ -116,6 +121,7 @@
             display: inline-block;
             font-weight: bold;
             margin-bottom: 1rem;
+            font-size: 0.9rem;
         }
         .game-board {
             display: grid;
@@ -123,10 +129,23 @@
             margin-bottom: 1.5rem;
             justify-content: center;
         }
+        /* Grilles par défaut */
         .grid-4 { grid-template-columns: repeat(4, 1fr); max-width: 500px; margin: 0 auto; }
         .grid-5 { grid-template-columns: repeat(5, 1fr); max-width: 620px; margin: 0 auto; }
         .grid-6 { grid-template-columns: repeat(6, 1fr); max-width: 740px; margin: 0 auto; }
         
+        /* Adaptation mobile : moins de colonnes */
+        @media (max-width: 650px) {
+            .grid-6 { grid-template-columns: repeat(3, 1fr) !important; }
+            .grid-5 { grid-template-columns: repeat(3, 1fr) !important; }
+            .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 450px) {
+            .grid-6, .grid-5 { grid-template-columns: repeat(2, 1fr) !important; }
+            .grid-4 { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        
+        /* Cartes : aucun effet de zoom/transformation */
         .card {
             aspect-ratio: 3/2;
             border-radius: 0.9rem;
@@ -141,6 +160,9 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.1);
             color: white;
             word-break: break-word;
+            transform: none !important;
+            transition: none !important;
+            font-size: 16px; /* empêche zoom auto sur mobile */
         }
         .card.easy-back { background: #2980b9; background: radial-gradient(circle at 30% 30%, #3498db, #1f618d); }
         .card.medium-back { background: #8e44ad; background: radial-gradient(circle at 30% 30%, #a569bd, #6c3483); }
@@ -187,50 +209,36 @@
             margin-top: 0.5rem;
             color: #2471a3;
         }
-        @media (max-width: 650px) {
-            .grid-4 { max-width: 350px; gap: 0.6rem; }
-            .grid-5 { max-width: 450px; gap: 0.6rem; }
-            .grid-6 { max-width: 540px; gap: 0.6rem; }
-            .card:not(.flipped):not(.matched) { font-size: 1.6rem; }
-        }
-        @media (max-width: 500px) {
-            .grid-4 { grid-template-columns: repeat(3, 1fr); max-width: 280px; }
-            .grid-5 { grid-template-columns: repeat(4, 1fr); max-width: 360px; }
-            .grid-6 { grid-template-columns: repeat(4, 1fr); max-width: 360px; }
+        /* Suppression de tout effet de scale au clic */
+        .card:active, .card:focus, .card:hover {
+            transform: none !important;
         }
     </style>
 </head>
 <body>
 <div class="container">
     <div class="top-bar">
-        <div class="source-link">
-            <a href="https://adrar-inu.blogspot.com/" target="_blank">Tala uMaziɣ</a>
-        </div>
+        <div class="source-link"><a href="https://adrar-inu.blogspot.com/" target="_blank">Tala uMaziɣ</a></div>
         <button id="soundToggleBtn" class="sound-toggle">🔊</button>
     </div>
-
     <h1>URAR N TKARḌIWIN</h1>
-
     <div class="level-selector">
         <button class="level-btn" data-level="easy">🔵 Ushil (16 n tkarḍiwin)</button>
         <button class="level-btn" data-level="medium">🟣 Alemmas (24 n tkarḍiwin)</button>
         <button class="level-btn" data-level="hard">⚫ Aweɛran (36 n tkarḍiwin)</button>
     </div>
-
     <div class="stats">
         <div>🏆 <span id="matchedCount">0</span> / <span id="totalCount">0</span></div>
         <div>🃏 <span id="flipCount">0</span></div>
     </div>
-
     <div id="message">🔍 Fren takarḍa</div>
-
     <div id="gameBoard" class="game-board"></div>
-
     <button id="resetBtn">⟳ Urar aswir-a i tikkelt-nniḍen</button>
     <div class="info">✅ Kfu aswir iwakken ad teldiḍ wayeḍ</div>
 </div>
 
 <script>
+    // ---------- PAIRES (tirées du document) ----------
     const FULL_PAIRS = [
         { mistake: "Fellawn", correction: "Fell-awen" },
         { mistake: "Ismis", correction: "Isem-is" },
@@ -272,14 +280,9 @@
     let audioCtx = null;
 
     function initAudio() {
-        if (!audioCtx) {
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     }
-
     function playSound(type) {
         if (!soundEnabled) return;
         try {
@@ -293,258 +296,135 @@
             gain.gain.setValueAtTime(0.2, now);
             gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
             switch(type) {
-                case 'click':
-                    osc.frequency.value = 880;
-                    osc.start(now);
-                    osc.stop(now + 0.1);
-                    break;
+                case 'click': osc.frequency.value = 880; osc.start(now); osc.stop(now+0.1); break;
                 case 'good':
-                    osc.frequency.value = 440;
-                    osc.start(now);
-                    osc.stop(now + 0.15);
+                    osc.frequency.value = 440; osc.start(now); osc.stop(now+0.15);
                     const osc2 = audioCtx.createOscillator();
                     const gain2 = audioCtx.createGain();
-                    osc2.connect(gain2);
-                    gain2.connect(audioCtx.destination);
-                    osc2.frequency.value = 523;
-                    gain2.gain.setValueAtTime(0.2, now + 0.2);
-                    gain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
-                    osc2.start(now + 0.2);
-                    osc2.stop(now + 0.35);
+                    osc2.connect(gain2); gain2.connect(audioCtx.destination);
+                    osc2.frequency.value = 523; gain2.gain.setValueAtTime(0.2, now+0.2);
+                    gain2.gain.exponentialRampToValueAtTime(0.0001, now+0.35);
+                    osc2.start(now+0.2); osc2.stop(now+0.35);
                     break;
-                case 'bad':
-                    osc.frequency.value = 220;
-                    osc.start(now);
-                    osc.stop(now + 0.4);
-                    break;
+                case 'bad': osc.frequency.value = 220; osc.start(now); osc.stop(now+0.4); break;
                 case 'win':
-                    const notes = [523, 659, 784];
-                    notes.forEach((freq, i) => {
-                        const o = audioCtx.createOscillator();
-                        const g = audioCtx.createGain();
-                        o.connect(g);
-                        g.connect(audioCtx.destination);
-                        o.frequency.value = freq;
-                        g.gain.setValueAtTime(0.25, now + i * 0.15);
-                        g.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.15 + 0.3);
-                        o.start(now + i * 0.15);
-                        o.stop(now + i * 0.15 + 0.3);
-                    });
+                    [523,659,784].forEach((freq,i)=>{ let o=audioCtx.createOscillator(), g=audioCtx.createGain();
+                        o.connect(g); g.connect(audioCtx.destination); o.frequency.value=freq;
+                        g.gain.setValueAtTime(0.25, now+i*0.15); g.gain.exponentialRampToValueAtTime(0.0001, now+i*0.15+0.3);
+                        o.start(now+i*0.15); o.stop(now+i*0.15+0.3); });
                     break;
-                default: break;
             }
-        } catch(e) { console.warn("Audio error", e); }
+        } catch(e) { console.warn(e); }
     }
 
-    function shuffle(arr) {
-        for (let i = arr.length - 1; i > 0; i--) {
-            let j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
-    }
-
-    function buildItems() {
-        let deck = [];
-        currentPairs.forEach((pair, idx) => {
-            deck.push({ type: 'mistake', text: pair.mistake, pairId: idx });
-            deck.push({ type: 'correction', text: pair.correction, pairId: idx });
-        });
-        return shuffle(deck);
-    }
-
-    function setGridClass() {
-        const boardDiv = document.getElementById('gameBoard');
-        boardDiv.className = 'game-board';
-        boardDiv.classList.add(LEVELS[currentLevel].gridClass);
-    }
-
-    function updateLevelButtons() {
-        const levelBtns = document.querySelectorAll('.level-btn');
-        levelBtns.forEach(btn => {
-            const lvl = btn.dataset.level;
-            const isUnlocked = LEVELS[lvl].unlocked;
-            if (isUnlocked) {
-                btn.classList.remove('locked');
-                btn.disabled = false;
-            } else {
-                btn.classList.add('locked');
-                btn.disabled = true;
-            }
-            if (lvl === currentLevel) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-    }
-
+    function shuffle(arr) { for(let i=arr.length-1;i>0;i--){ let j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+    function buildItems() { let deck=[]; currentPairs.forEach((p,i)=>{ deck.push({type:'mistake',text:p.mistake,pairId:i}); deck.push({type:'correction',text:p.correction,pairId:i}); }); return shuffle(deck); }
+    function setGridClass() { const bd=document.getElementById('gameBoard'); bd.className='game-board'; bd.classList.add(LEVELS[currentLevel].gridClass); }
+    function updateLevelButtons() { document.querySelectorAll('.level-btn').forEach(btn=>{ let lvl=btn.dataset.level, unlocked=LEVELS[lvl].unlocked; if(unlocked){ btn.classList.remove('locked'); btn.disabled=false; }else{ btn.classList.add('locked'); btn.disabled=true; } if(lvl===currentLevel) btn.classList.add('active'); else btn.classList.remove('active'); }); }
     function unlockNextLevel() {
-        if (currentLevel === 'easy' && !LEVELS.medium.unlocked) {
-            LEVELS.medium.unlocked = true;
-            document.getElementById('message').innerHTML = '🎉 Aswir ushil yekfa ! Aswir alemmas yeldi 🎉';
-            playSound('win');
-            updateLevelButtons();
-        } else if (currentLevel === 'medium' && !LEVELS.hard.unlocked) {
-            LEVELS.hard.unlocked = true;
-            document.getElementById('message').innerHTML = '🎉 Aswir alemmas yekfa ! Aswir aweɛran yeldi 🎉';
-            playSound('win');
-            updateLevelButtons();
-        } else if (currentLevel === 'hard' && matchedCount === totalPairs) {
-            document.getElementById('message').innerHTML = '🎉 Ayyuz ! Tekfiḍ merra iswiren ! 🎉';
-            playSound('win');
-        }
+        if(currentLevel==='easy' && !LEVELS.medium.unlocked){ LEVELS.medium.unlocked=true; document.getElementById('message').innerHTML='🎉 Aswir ushil yekfa ! Aswir alemmas yeldi 🎉'; playSound('win'); updateLevelButtons(); }
+        else if(currentLevel==='medium' && !LEVELS.hard.unlocked){ LEVELS.hard.unlocked=true; document.getElementById('message').innerHTML='🎉 Aswir alemmas yekfa ! Aswir aweɛran yeldi 🎉'; playSound('win'); updateLevelButtons(); }
+        else if(currentLevel==='hard' && matchedCount===totalPairs){ document.getElementById('message').innerHTML='🎉 Ayyuz ! Tekfiḍ merra iswiren ! 🎉'; playSound('win'); }
     }
-
     function resetGame() {
-        if (timeoutId) clearTimeout(timeoutId);
-        const count = LEVELS[currentLevel].pairsCount;
-        currentPairs = FULL_PAIRS.slice(0, count);
-        totalPairs = currentPairs.length;
-        items = buildItems();
-        flippedCards = [];
-        matchedCount = 0;
-        flipCounter = 0;
-        document.getElementById('matchedCount').innerText = '0';
-        document.getElementById('totalCount').innerText = totalPairs;
-        document.getElementById('flipCount').innerText = '0';
-        document.getElementById('message').innerText = '🔍 Urar amaynut !';
-        lockBoard = false;
+        if(timeoutId) clearTimeout(timeoutId);
+        const count=LEVELS[currentLevel].pairsCount;
+        currentPairs=FULL_PAIRS.slice(0,count);
+        totalPairs=currentPairs.length;
+        items=buildItems();
+        flippedCards=[];
+        matchedCount=0;
+        flipCounter=0;
+        document.getElementById('matchedCount').innerText='0';
+        document.getElementById('totalCount').innerText=totalPairs;
+        document.getElementById('flipCount').innerText='0';
+        document.getElementById('message').innerText='🔍 Urar amaynut !';
+        lockBoard=false;
         setGridClass();
         renderBoard();
     }
-
-    function setLevel(level) {
-        if (!LEVELS[level].unlocked) return;
-        currentLevel = level;
-        resetGame();
-        updateLevelButtons();
-    }
-
+    function setLevel(level) { if(!LEVELS[level].unlocked) return; currentLevel=level; resetGame(); updateLevelButtons(); }
     function renderBoard() {
-        const boardDiv = document.getElementById('gameBoard');
-        const backColorClass = LEVELS[currentLevel].colorClass;
-        boardDiv.innerHTML = '';
-        items.forEach((item, idx) => {
-            const card = document.createElement('div');
-            card.className = `card ${backColorClass}`;
-            card.dataset.index = idx;
-            card.dataset.type = item.type;
-            card.dataset.text = item.text;
-            card.dataset.pairId = item.pairId;
-            card.textContent = '🔁';
-            card.addEventListener('click', () => flipCard(card));
+        const boardDiv=document.getElementById('gameBoard');
+        const backClass=LEVELS[currentLevel].colorClass;
+        boardDiv.innerHTML='';
+        items.forEach((item,idx)=>{
+            const card=document.createElement('div');
+            card.className=`card ${backClass}`;
+            card.dataset.index=idx;
+            card.dataset.type=item.type;
+            card.dataset.text=item.text;
+            card.dataset.pairId=item.pairId;
+            card.textContent='🔁';
+            card.addEventListener('click',()=>flipCard(card));
             boardDiv.appendChild(card);
         });
     }
-
     function flipCard(card) {
-        if (lockBoard) return;
-        if (card.classList.contains('flipped') || card.classList.contains('matched')) return;
-
+        if(lockBoard) return;
+        if(card.classList.contains('flipped') || card.classList.contains('matched')) return;
         playSound('click');
-
-        const backClass = LEVELS[currentLevel].colorClass;
+        const backClass=LEVELS[currentLevel].colorClass;
         card.classList.remove(backClass);
         card.classList.add('flipped');
-        card.style.fontSize = '0.7rem';
-        
-        const typeLabel = card.dataset.type === 'mistake' ? '❌ Tuccḍa' : '✅ Aseɣti';
-        card.innerHTML = `<div><span class="badge">${typeLabel}</span><br>${escapeHtml(card.dataset.text)}</div>`;
+        card.style.fontSize='0.7rem';
+        const typeLabel=card.dataset.type==='mistake'?'❌ Tuccḍa':'✅ Aseɣti';
+        card.innerHTML=`<div><span class="badge">${typeLabel}</span><br>${escapeHtml(card.dataset.text)}</div>`;
         flippedCards.push(card);
         flipCounter++;
-        document.getElementById('flipCount').innerText = flipCounter;
-
-        if (flippedCards.length === 2) {
-            lockBoard = true;
-            const cardA = flippedCards[0];
-            const cardB = flippedCards[1];
-            const pairA = parseInt(cardA.dataset.pairId);
-            const pairB = parseInt(cardB.dataset.pairId);
-            const typeA = cardA.dataset.type;
-            const typeB = cardB.dataset.type;
-            const isMatch = (pairA === pairB && typeA !== typeB);
-
-            if (isMatch) {
-                document.getElementById('message').innerText = '✔️ Tayuga yelhan !';
+        document.getElementById('flipCount').innerText=flipCounter;
+        if(flippedCards.length===2){
+            lockBoard=true;
+            const cardA=flippedCards[0], cardB=flippedCards[1];
+            const pairA=parseInt(cardA.dataset.pairId), pairB=parseInt(cardB.dataset.pairId);
+            const typeA=cardA.dataset.type, typeB=cardB.dataset.type;
+            const isMatch=(pairA===pairB && typeA!==typeB);
+            if(isMatch){
+                document.getElementById('message').innerText='✔️ Tayuga yelhan !';
                 playSound('good');
-                if (timeoutId) clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    cardA.classList.add('matched');
-                    cardB.classList.add('matched');
-                    cardA.classList.remove('flipped');
-                    cardB.classList.remove('flipped');
+                if(timeoutId) clearTimeout(timeoutId);
+                timeoutId=setTimeout(()=>{
+                    cardA.classList.add('matched'); cardB.classList.add('matched');
+                    cardA.classList.remove('flipped'); cardB.classList.remove('flipped');
                     matchedCount++;
-                    document.getElementById('matchedCount').innerText = matchedCount;
-                    flippedCards = [];
-                    lockBoard = false;
-                    if (matchedCount === totalPairs) {
-                        document.getElementById('message').innerHTML = currentLevel === 'hard' ? '🎉 Yekfa uswir ! Ayyuz !' : '🎉 Yekfa uswir ! Aswir nnig-s yeldi !';
+                    document.getElementById('matchedCount').innerText=matchedCount;
+                    flippedCards=[];
+                    lockBoard=false;
+                    if(matchedCount===totalPairs){
+                        document.getElementById('message').innerHTML=currentLevel==='hard'?'🎉 Yekfa uswir ! Ayyuz !':'🎉 Yekfa uswir ! Aswir nnig-s yeldi !';
                         unlockNextLevel();
-                    } else {
-                        document.getElementById('message').innerText = '🔍 Kemmel !';
-                    }
-                    timeoutId = null;
-                }, 1800);
+                    } else document.getElementById('message').innerText='🔍 Kemmel !';
+                    timeoutId=null;
+                },1800);
             } else {
-                document.getElementById('message').innerText = '❌ Tayuga ur nelhi ara';
+                document.getElementById('message').innerText='❌ Tayuga ur nelhi ara';
                 playSound('bad');
-                if (timeoutId) clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    flippedCards.forEach(c => {
+                if(timeoutId) clearTimeout(timeoutId);
+                timeoutId=setTimeout(()=>{
+                    flippedCards.forEach(c=>{
                         c.classList.remove('flipped');
                         c.classList.add(backClass);
-                        c.textContent = '🔁';
-                        c.style.fontSize = '';
+                        c.textContent='🔁';
+                        c.style.fontSize='';
                     });
-                    flippedCards = [];
-                    lockBoard = false;
-                    document.getElementById('message').innerText = '🔁 Zzi snat n tkarḍiwin';  // Correction ici
-                    timeoutId = null;
-                }, 1200);
+                    flippedCards=[];
+                    lockBoard=false;
+                    document.getElementById('message').innerText='🔁 Zzi snat n tkarḍiwin';
+                    timeoutId=null;
+                },1200);
             }
-        } else {
-            document.getElementById('message').innerText = '🔍 Zzi takarḍa tis snat';  // Correction ici
-        }
+        } else document.getElementById('message').innerText='🔍 Zzi takarḍa tis snat';
     }
+    function escapeHtml(str){ return str.replace(/[&<>]/g,function(m){ if(m==='&') return '&amp;'; if(m==='<') return '&lt;'; if(m==='>') return '&gt;'; return m;}); }
 
-    function escapeHtml(str) {
-        return str.replace(/[&<>]/g, function(m) {
-            if (m === '&') return '&amp;';
-            if (m === '<') return '&lt;';
-            if (m === '>') return '&gt;';
-            return m;
-        });
-    }
-
-    const soundToggleBtn = document.getElementById('soundToggleBtn');
-    soundToggleBtn.addEventListener('click', () => {
-        soundEnabled = !soundEnabled;
-        soundToggleBtn.textContent = soundEnabled ? '🔊' : '🔇';
-        if (soundEnabled && audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-    });
-
-    document.getElementById('resetBtn').addEventListener('click', () => resetGame());
-    document.querySelectorAll('.level-btn').forEach(btn => {
-        btn.addEventListener('click', () => setLevel(btn.dataset.level));
-    });
-
-    LEVELS.easy.unlocked = true;
-    LEVELS.medium.unlocked = false;
-    LEVELS.hard.unlocked = false;
-    currentLevel = 'easy';
-    updateLevelButtons();
-    resetGame();
-
-    function unlockAudioOnFirstInteraction() {
-        if (audioCtx && audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-        document.body.removeEventListener('click', unlockAudioOnFirstInteraction);
-    }
-    document.body.addEventListener('click', unlockAudioOnFirstInteraction);
+    const soundToggleBtn=document.getElementById('soundToggleBtn');
+    soundToggleBtn.addEventListener('click',()=>{ soundEnabled=!soundEnabled; soundToggleBtn.textContent=soundEnabled?'🔊':'🔇'; if(soundEnabled && audioCtx && audioCtx.state==='suspended') audioCtx.resume(); });
+    document.getElementById('resetBtn').addEventListener('click',()=>resetGame());
+    document.querySelectorAll('.level-btn').forEach(btn=>btn.addEventListener('click',()=>setLevel(btn.dataset.level)));
+    LEVELS.easy.unlocked=true; LEVELS.medium.unlocked=false; LEVELS.hard.unlocked=false;
+    currentLevel='easy'; updateLevelButtons(); resetGame();
+    function unlockAudioOnFirstInteraction(){ if(audioCtx && audioCtx.state==='suspended') audioCtx.resume(); document.body.removeEventListener('click',unlockAudioOnFirstInteraction); }
+    document.body.addEventListener('click',unlockAudioOnFirstInteraction);
 </script>
 </body>
 </html>
